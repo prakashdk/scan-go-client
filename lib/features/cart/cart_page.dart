@@ -22,6 +22,7 @@ class CartPage extends StatefulWidget {
 class _CartPageState extends State<CartPage> {
   bool _scannerOpen = false;
   bool _manualMode = false;
+  bool _manualSubmitting = false;
   bool _codeScanned = false;
   final TextEditingController _manualCtrl = TextEditingController();
   MobileScannerController? _scanCtrl;
@@ -58,32 +59,52 @@ class _CartPageState extends State<CartPage> {
     });
   }
 
-  Future<void> _handleBarcode(String barcode) async {
-    if (_codeScanned) return;
-    setState(() => _codeScanned = true);
+  Future<bool> _handleBarcode(
+    String barcode, {
+    bool fromScanner = false,
+  }) async {
+    if (fromScanner && _codeScanned) return false;
+    if (fromScanner) setState(() => _codeScanned = true);
     HapticFeedback.mediumImpact();
-    _closeScanner();
-    final ok = await context.read<CartProvider>().addItem(widget.cartId, barcode);
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            context.read<CartProvider>().error ?? 'Product not found',
-            style: GoogleFonts.spaceGrotesk(color: AppColors.textPrimary),
+    if (_scannerOpen) _closeScanner();
+    var succeeded = false;
+    try {
+      succeeded =
+          await context.read<CartProvider>().addItem(widget.cartId, barcode);
+      if (!succeeded && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.read<CartProvider>().error ?? 'Unable to add product',
+              style: GoogleFonts.spaceGrotesk(color: AppColors.textPrimary),
+            ),
           ),
-        ),
-      );
-    } else if (ok && mounted) {
-      HapticFeedback.lightImpact();
+        );
+      } else if (succeeded && mounted) {
+        HapticFeedback.lightImpact();
+      }
+    } finally {
+      if (fromScanner && mounted) {
+        setState(() => _codeScanned = false);
+      }
     }
+    return succeeded;
   }
 
   Future<void> _addManual() async {
+    if (_manualSubmitting) return;
     final code = _manualCtrl.text.trim();
     if (code.isEmpty) return;
-    setState(() => _manualMode = false);
-    _manualCtrl.clear();
-    await _handleBarcode(code);
+    setState(() => _manualSubmitting = true);
+    try {
+      final succeeded = await _handleBarcode(code);
+      if (succeeded && mounted) {
+        setState(() => _manualMode = false);
+        _manualCtrl.clear();
+      }
+    } finally {
+      if (mounted) setState(() => _manualSubmitting = false);
+    }
   }
 
   @override
@@ -98,13 +119,14 @@ class _CartPageState extends State<CartPage> {
         ),
         actions: [
           Consumer<CartProvider>(
-            builder: (_, cart, __) => cart.cart != null && cart.cart!.items.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded,
-                        color: AppColors.error),
-                    onPressed: () => _confirmClear(context),
-                  )
-                : const SizedBox.shrink(),
+            builder: (_, cart, __) =>
+                cart.cart != null && cart.cart!.items.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded,
+                            color: AppColors.error),
+                        onPressed: () => _confirmClear(context),
+                      )
+                    : const SizedBox.shrink(),
           ),
         ],
       ),
@@ -130,7 +152,8 @@ class _CartPageState extends State<CartPage> {
       bottomNavigationBar: Consumer<CartProvider>(
         builder: (_, cartProvider, __) {
           final cart = cartProvider.cart;
-          if (cart == null || cart.items.isEmpty) return const SizedBox.shrink();
+          if (cart == null || cart.items.isEmpty)
+            return const SizedBox.shrink();
           return _buildBottomBar(context, cart);
         },
       ),
@@ -292,7 +315,9 @@ class _CartPageState extends State<CartPage> {
                 controller: _scanCtrl!,
                 onDetect: (capture) {
                   final code = capture.barcodes.firstOrNull?.rawValue;
-                  if (code != null) _handleBarcode(code);
+                  if (code != null) {
+                    _handleBarcode(code, fromScanner: true);
+                  }
                 },
               ),
             // Top bar
@@ -347,15 +372,15 @@ class _CartPageState extends State<CartPage> {
                   border: Border.all(color: AppColors.accent, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-              ).animate(onPlay: (c) => c.repeat(reverse: true))
-                  .custom(
+              ).animate(onPlay: (c) => c.repeat(reverse: true)).custom(
                     duration: 1200.ms,
                     builder: (_, value, child) => Container(
                       width: 260,
                       height: 140,
                       decoration: BoxDecoration(
                         border: Border.all(
-                            color: AppColors.accent.withOpacity(0.5 + 0.5 * value),
+                            color:
+                                AppColors.accent.withOpacity(0.5 + 0.5 * value),
                             width: 2),
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
@@ -391,8 +416,7 @@ class _CartPageState extends State<CartPage> {
                     24, 24, 24, 24 + MediaQuery.of(context).padding.bottom),
                 decoration: const BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -410,8 +434,7 @@ class _CartPageState extends State<CartPage> {
                         IconButton(
                           icon: const Icon(Icons.close_rounded,
                               color: AppColors.textSecondary),
-                          onPressed: () =>
-                              setState(() => _manualMode = false),
+                          onPressed: () => setState(() => _manualMode = false),
                         ),
                       ],
                     ),
@@ -435,8 +458,16 @@ class _CartPageState extends State<CartPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _addManual,
-                        child: const Text('Add to Cart'),
+                        onPressed: _manualSubmitting ? null : _addManual,
+                        child: _manualSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Add to Cart'),
                       ),
                     ),
                   ],
@@ -490,7 +521,8 @@ class _CartPageState extends State<CartPage> {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text('Cancel',
-                style: GoogleFonts.spaceGrotesk(color: AppColors.textSecondary)),
+                style:
+                    GoogleFonts.spaceGrotesk(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -584,10 +616,7 @@ class _CartItemCard extends StatelessWidget {
           ),
         ],
       ),
-    )
-        .animate()
-        .fadeIn(delay: (index * 50).ms)
-        .slideX(begin: 0.05, end: 0);
+    ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.05, end: 0);
   }
 }
 
@@ -647,7 +676,8 @@ class _QtyBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon,
-            size: 16, color: isDelete ? AppColors.error : AppColors.textPrimary),
+            size: 16,
+            color: isDelete ? AppColors.error : AppColors.textPrimary),
       ),
     );
   }
@@ -682,8 +712,7 @@ class _ScanButton extends StatelessWidget {
         GestureDetector(
           onTap: onScan,
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                   colors: [AppColors.accent, AppColors.accentDark]),

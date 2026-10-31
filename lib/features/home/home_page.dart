@@ -22,36 +22,37 @@ class HomePage extends StatelessWidget {
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(context, auth)),
             SliverToBoxAdapter(child: _buildQuickActions(context)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 12),
-                child: Row(
-                  children: [
-                    Text('Featured',
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        )),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text('Ads coming soon',
-                          style: GoogleFonts.spaceGrotesk(
-                              fontSize: 11,
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(child: _buildAdPlaceholders()),
+            // Ad slot section is temporarily disabled.
+            // SliverToBoxAdapter(
+            //   child: Padding(
+            //     padding: const EdgeInsets.fromLTRB(24, 28, 24, 12),
+            //     child: Row(
+            //       children: [
+            //         Text('Featured',
+            //             style: GoogleFonts.spaceGrotesk(
+            //               fontSize: 20,
+            //               fontWeight: FontWeight.w700,
+            //               color: AppColors.textPrimary,
+            //             )),
+            //         const Spacer(),
+            //         Container(
+            //           padding: const EdgeInsets.symmetric(
+            //               horizontal: 10, vertical: 4),
+            //           decoration: BoxDecoration(
+            //             color: AppColors.accent.withOpacity(0.15),
+            //             borderRadius: BorderRadius.circular(8),
+            //           ),
+            //           child: Text('Ads coming soon',
+            //               style: GoogleFonts.spaceGrotesk(
+            //                   fontSize: 11,
+            //                   color: AppColors.accent,
+            //                   fontWeight: FontWeight.w600)),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
+            // SliverToBoxAdapter(child: _buildAdPlaceholders()),
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
@@ -116,10 +117,8 @@ class HomePage extends StatelessWidget {
                   ],
                 ),
               ),
-            )
-                .animate(onPlay: (c) => c.repeat(reverse: true))
-                .shimmer(
-                    duration: 2000.ms, color: Colors.white.withOpacity(0.3)),
+            ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(
+                duration: 2000.ms, color: Colors.white.withOpacity(0.3)),
         ],
       ),
     ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.1, end: 0);
@@ -179,11 +178,13 @@ class HomePage extends StatelessWidget {
         .slideY(begin: 0.1, end: 0);
   }
 
+  /*
   Widget _buildAdPlaceholders() {
     return Column(
       children: List.generate(3, (i) => _AdPlaceholder(index: i)),
     );
   }
+  */
 
   String _greeting() {
     final hour = DateTime.now().hour;
@@ -250,6 +251,7 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
+/*
 class _AdPlaceholder extends StatelessWidget {
   final int index;
   const _AdPlaceholder({required this.index});
@@ -324,4 +326,4 @@ class _AdPlaceholder extends StatelessWidget {
         .fadeIn(delay: (300 + index * 100).ms)
         .slideY(begin: 0.1, end: 0);
   }
-}
+  */

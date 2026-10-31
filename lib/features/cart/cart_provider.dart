@@ -1,6 +1,7 @@
 // lib/features/cart/cart_provider.dart
 
 import 'package:flutter/material.dart';
+import '../../core/api/api_client.dart';
 import '../../core/api/api_service.dart';
 import '../../core/models/models.dart';
 
@@ -42,7 +43,7 @@ class CartProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = 'Product not found for barcode: $barcode';
+      _error = e is ApiException ? e.message : e.toString();
       notifyListeners();
       return false;
     } finally {

@@ -5,6 +5,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../../core/api/api_client.dart';
 import '../../core/api/api_service.dart';
 import '../../core/models/models.dart';
 import '../../core/utils/theme.dart';
@@ -198,6 +200,50 @@ class _OrderBillPageState extends State<OrderBillPage> {
                   letterSpacing: 0.3),
             ),
           ).animate().fadeIn(delay: 500.ms),
+          const SizedBox(height: 20),
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  'Scan to look up this order',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: QrImageView(
+                    data: Uri.parse(ApiClient.baseUrl)
+                        .resolve(
+                          '/api/v1/orders/${Uri.encodeComponent(widget.orderId)}/bill',
+                        )
+                        .toString(),
+                    version: QrVersions.auto,
+                    size: 180,
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    semanticsLabel: 'QR code for order ${widget.orderId}',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Order lookup · ${Uri.parse(ApiClient.baseUrl).host}',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(delay: 550.ms),
           const SizedBox(height: 40),
         ],
       ),
